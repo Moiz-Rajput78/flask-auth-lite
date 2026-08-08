@@ -1,0 +1,52 @@
+{% extends "base.html" %} {% block title %}Dashboard · Flask Auth Lite{%
+endblock %} {% block content %}
+<section class="mx-auto max-w-4xl">
+  <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-semibold" style="color: #38BDF8;">Welcome {{ current_user.username }} to your Dashboard👋</h1> 
+      <a href="/logout" class="rounded-lg bg-rose-500/20 px-3 py-1.5 text-rose-300 hover:bg-rose-500/30 text-sm">
+        Logout
+      </a>
+      
+      <a href="/change-password" class="rounded-lg bg-blue-500/20 px-3 py-1.5 text-blue-300 hover:bg-blue-500/30 text-sm">
+        Change Password
+      </a>
+    </div><br>
+    <h2>Account Information</h2>
+    <ul class="mt-2 text-sm text-slate-400">
+      <li><strong>Username:</strong> {{ current_user.username }}</li>
+      <li><strong>Email:</strong> {{ current_user.email }}</li>
+    </ul>
+  </div>
+
+    <p class="mt-2 text-slate-400 text-sm">
+      This page is protected. Only logged-in users can view it.
+    </p>
+
+    <div class=" mt-6 w-full grid gap-4 md:grid-cols-1">
+      <div class="  rounded-xl border border-slate-800 p-4">
+        <div class="text-slate-400 text-sm mb-2" style="color: #38BDF8;">Functionalities</div>
+        <div class="text-slate-100">
+          <ul>
+            <li>Register  (User Registers his ID in Website.)</li>
+            <li>Login  (User Logins with his Email and Password.)</li>
+            <li>Logout  (User can Logout from his Account.)</li>
+            <li>Protected Dashboard  (User cannot login into the dashboard without logging in.)</li>
+            <li>Change Password  (User can update his Password whenever he/she wants.)</li>
+            <li>Health Check  (User can check the health of the database.)</li>
+            <li>Remember Me  (User can stay logged in for 7 days.)</li>
+            <li>Private Window  (User can open the dashboard in a private window.)</li>
+            <li>Responsive Design  (The website is responsive and works on all devices.)</li>
+            <li>Dashboard  (User can view their dashboard and account information after logging in.)</li>
+          </ul>
+        </div>
+      </div><br>
+     </div>
+     <div>
+    <div class="mt-1 rounded-xl border border-slate-800 p-4 text-xs text-slate-500">
+      Tip: Try opening this URL in a private window — you’ll be redirected to
+      the login page.
+    </div>
+  </div>
+</section>
+{% endblock %}
