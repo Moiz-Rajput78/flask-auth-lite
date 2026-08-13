@@ -1,4 +1,5 @@
-from flask import Flask, flash, render_template,url_for, request, redirect,flash
+import os
+from flask import Flask, flash, render_template, url_for, request, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
 from sqlalchemy import text
@@ -7,10 +8,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from urllib.parse import urlparse
 from datetime import timedelta
 import re
+from dotenv import load_dotenv 
+
+
+load_dotenv()
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -23,10 +27,18 @@ class User(db.Model, UserMixin):
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'your_secret_key'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+
+   
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
+
+    
+    if not app.config['SECRET_KEY']:
+        raise ValueError("SECRET_KEY environment variable not set.")
+    if not app.config['SQLALCHEMY_DATABASE_URI']:
+        raise ValueError("DATABASE_URL environment variable not set.")
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -35,22 +47,21 @@ def create_app():
     @app.route("/health/db")
     def health_check():
         try:
+            # Use text() for raw SQL queries
             db.session.execute(text('SELECT 1'))
-            return{"db":"ok"}, 200
-
+            return {"db": "ok"}, 200
         except Exception as e:
             return {"db": "error", "detail": str(e)}, 500
 
+    # Migrate database tables when the app context is available
     with app.app_context():
-        db.create_all()  
-
+        db.create_all()
 
     def _is_safe_local_path(target:str)->bool:
         if not target:
             return False
         parts = urlparse(target)
         return parts.scheme == "" and parts.netloc == "" and target.startswith("/")
-          
 
     @app.route("/")
     def index():
@@ -58,7 +69,6 @@ def create_app():
 
     @app.route("/dashboard")
     @login_required
-
     def dashboard():
         return render_template("dashboard.html")
 
@@ -69,9 +79,7 @@ def create_app():
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
-
         errors=[]
-
         if request.method == "POST":
             username = (request.form.get("username")or "").strip()
             email = (request.form.get("email")or "").strip()
@@ -100,12 +108,13 @@ def create_app():
                 except IntegrityError:
                     db.session.rollback()
                     errors.append("Username or email already exists.")
-                
+                except Exception as e: # Catch other potential database errors
+                    db.session.rollback()
+                    errors.append(f"An error occurred during registration: {e}")
         return render_template("register.html", errors=errors)
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
-
         errors=[]
         if request.method == "POST":
             email = (request.form.get("email")or "").strip()
@@ -127,9 +136,7 @@ def create_app():
                     next_url = request.form.get("next") or request.args.get("next") or ""
                     if _is_safe_local_path(next_url):
                         return redirect(next_url)
-
                     return redirect(url_for('dashboard'))
-
         return render_template("login.html", errors=errors)
 
     @app.route("/logout")
@@ -157,33 +164,25 @@ def create_app():
                     errors.append("New passwords do not match.")
 
                 if not errors:
-
-                    current_user.password = generate_password_hash(new_pw)
-                    db.session.commit()
-                    flash("Password changed successfully!", "success")
-                    return redirect(url_for('dashboard'))
-
-                print(request.form)
-
+                    try:
+                        current_user.password = generate_password_hash(new_pw)
+                        db.session.commit()
+                        flash("Password changed successfully!", "success")
+                        return redirect(url_for('dashboard'))
+                    except Exception as e:
+                        db.session.rollback()
+                        errors.append(f"An error occurred while changing password: {e}")
             return render_template("change_password.html", errors=errors)
-
-               
 
     @login_manager.user_loader
     def load_user(user_id):
        return User.query.get(int(user_id))
 
-
     return app
-   
 
-
-
+app = create_app()
 
 
 if __name__ == "__main__":
-    app = create_app()
+    
     app.run(debug=True)
-
-
-app = create_app()
